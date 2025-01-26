@@ -1,0 +1,38 @@
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication.Internal;
+
+namespace Dashboard.App.CustomAuth;
+
+public class CustomAccountFactory(
+        IAccessTokenProviderAccessor accessor,
+        IServiceProvider serviceProvider, ILogger<CustomAccountFactory> logger,
+        IConfiguration config)
+    : AccountClaimsPrincipalFactory<CustomAccount>(accessor)
+{
+    private readonly ILogger<CustomAccountFactory> logger = logger;
+    private readonly IServiceProvider serviceProvider = serviceProvider;
+
+    public override async ValueTask<ClaimsPrincipal> CreateUserAsync(
+        CustomAccount account,
+        RemoteAuthenticationUserOptions options)
+    {
+        var initialUser = await base.CreateUserAsync(account, options);
+
+        if (initialUser.Identity is not null &&
+            initialUser.Identity.IsAuthenticated)
+        {
+            var userIdentity = initialUser.Identity as ClaimsIdentity;
+
+            if (userIdentity is not null)
+            {
+                account?.Roles?.ForEach((role) =>
+                {
+                    userIdentity.AddClaim(new Claim("role", role));
+                });
+            }
+        }
+
+        return initialUser;
+    }
+}
