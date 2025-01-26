@@ -1,0 +1,20 @@
+﻿.label {
+    background-color: darkslateblue;
+    padding: 0.75rem;
+    text-transform: capitalize;
+    font-weight: bold;
+    width: 100%;
+}
+
+table {
+    width: 75%;
+    align-self: flex-start;
+}
+
+table th, table td {
+    padding: 0.25rem;
+    border-bottom: 1px solid #d6d5d5;
+    background-color: #37373f;
+    font-family: Consolas, monospace;
+    color: #cfffcf;
+}

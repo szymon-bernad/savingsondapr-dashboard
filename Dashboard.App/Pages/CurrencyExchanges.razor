@@ -1,0 +1,139 @@
+﻿@page "/currency-exchanges"
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using BlazorBootstrap;
+
+<PageTitle>Currency Exchanges</PageTitle>
+
+<p>Welcome to Currency Exchanges Dashboard!</p>
+
+@if (!ExchangeTypes.Any())
+{
+    <p><em >@LoadingMessage</em></p>
+}
+else
+{
+    <AuthorizeView Roles="Advanced">
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col-2">
+                   <InputSelect style="width: 100%;" @bind-Value="Model.ExchangeType"
+                    @bind-Value:after="OnQueryChangedAsync"
+                    DisplayName="Exchange Types">
+                    <option>--Select--</option>
+                    @foreach (var exch in ExchangeTypes)
+                    {
+                        <option value=@exch.Key>@exch.Key</option>
+                    }
+                </InputSelect>
+                </div>
+                <div class="col-4">
+                    <InputDate @bind-Value="Model.FilterDate"  @bind-Value:after="OnQueryChangedAsync" Placeholder="Select Date" />
+                </div>
+                <div class="col-6">
+                    <span />
+                </div>
+            </div>
+            @if(Model?.ExchangeType is not null)
+            {
+                <table class="table">
+                <tbody>
+                    <tr class="top-row">
+                        <td colspan="1">
+                            <label class="label">Type:</label>
+                        </td>
+                        <td colspan="1" class="text-left"><span><strong>@Model!.ExchangeType</strong></span></td>
+                        <td colspan="1">
+                            <label class="label"># of exchanges:</label>
+                        </td>
+                        <td colspan="1"><span>@Model!.Data?.TotalCountOfExchanges</span></td>
+                    </tr>
+                    <tr>
+                        <td colspan="1">
+                            <label class="label">Total source amount:</label>
+                        </td>
+                        <td colspan="1"><span>@Model!.Data?.TotalSourceAmountOfExchanges</span></td>
+                            <td colspan="1">
+                                <label class="label">Total target amount:</label>
+                            </td>
+                            <td colspan="1"><span>@Model!.Data?.TotalTargetAmountOfExchanges</span></td>
+                    </tr>
+                </tbody>    
+                </table>
+            }
+
+        </div>
+    </AuthorizeView>
+}
+
+@code {
+    [SupplyParameterFromForm]
+    private Dashboard? Model { get; set; }
+
+
+    private ICollection<KeyValuePair<string, Tuple<string, string>>> ExchangeTypes = [
+        new KeyValuePair<string, Tuple<string, string>>("EUR => USD", new Tuple<string, string>("EUR", "USD")),
+    new KeyValuePair<string, Tuple<string, string>>("USD => EUR", new Tuple<string, string>("USD", "EUR")),
+    new KeyValuePair<string, Tuple<string, string>>("USD => GBP", new Tuple<string, string>("USD", "GBP")),
+    new KeyValuePair<string, Tuple<string, string>>("USD => PLN", new Tuple<string, string>("USD", "PLN")),
+    new KeyValuePair<string, Tuple<string, string>>("EUR => GBP", new Tuple<string, string>("EUR", "GBP")),
+    new KeyValuePair<string, Tuple<string, string>>("EUR => PLN", new Tuple<string, string>("EUR", "PLN")),
+    ];
+
+    private string LoadingMessage = "Loading...";
+
+    private const string BackEndBaseUrl = "http://localhost:5163/v1/events";
+
+    private readonly HttpClient _httpClient = new HttpClient();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model = new();
+        await Task.Delay(500);
+    }
+
+    protected async Task DateChanged(DateOnly date)
+    {
+        if (date != Model?.FilterDate)
+        {
+            Model.FilterDate = date;
+
+            await OnQueryChangedAsync();
+        }
+    }
+
+    protected async Task OnQueryChangedAsync()
+    {
+        if (Model?.ExchangeType is not null)
+        {
+            Console.WriteLine($"Selected Exchange Type: {Model.ExchangeType} & {Model.FilterDate}");
+            var exchTypeValue = ExchangeTypes.FirstOrDefault(x => x.Key == Model.ExchangeType).Value;
+            var response = await _httpClient.GetFromJsonAsync<ExchangeData>(
+                $"{BackEndBaseUrl}/currency-exchange-summary/{exchTypeValue.Item1}/{exchTypeValue.Item2}/{Model.FilterDate:yyyy-MM-dd}");
+
+            Model.Data = response;
+        }
+    }
+
+    // =================================================================================================
+
+    public class Dashboard
+    {
+        public string? ExchangeType { get; set; }
+
+        public DateOnly FilterDate { get; set; } = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+
+        public ExchangeData? Data { get; set; } = default;
+
+    }
+
+    public class ExchangeData
+    {
+        public int TotalCountOfExchanges { get; set; }
+        public decimal TotalSourceAmountOfExchanges { get; set; }
+        public decimal TotalTargetAmountOfExchanges { get; set; }
+    }
+}
