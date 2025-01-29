@@ -1,0 +1,23 @@
+﻿@using Dashboard.App.Models
+<div class="card">
+    <div class="card-header bg-dark">
+        <h5 class="card-title">
+            @(AccountDto?.AccountRef ?? "Unknown...")
+        </h5>
+    </div>
+    <div class="card-body bg-dark">
+            <div class="row">
+                <div class="col-6">
+                    <p class="card-text">Account Number: @AccountDto?.AccountId</p>
+                    <p class="card-text">Account Type: @AccountDto?.AccountType</p>
+                    <p class="card-text">Balance: @AccountDto?.TotalBalance</p>
+                </div>
+            </div>
+    </div>
+</div>
+
+
+
+@code {
+    [Parameter] public BankAccountDto? AccountDto { get; set; }
+}

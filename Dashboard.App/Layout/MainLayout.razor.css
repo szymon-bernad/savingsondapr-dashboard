@@ -24,16 +24,12 @@ main {
     align-items: center;
     color: #cfffcf;
 }
-
-.top-row a {
-    color: #cfffcf;
-}
-
     .top-row ::deep a, .top-row ::deep .btn-link {
         white-space: nowrap;
         margin-left: 1.5rem;
         text-decoration: none;
-
+        color: #efe;
+        font-weight: bold;
     }
 
     .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {

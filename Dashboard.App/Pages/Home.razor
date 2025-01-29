@@ -1,12 +1,13 @@
 ﻿@page "/"
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.Identity.Web
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Hello, @UserId!</h1>
 
 Welcome to your new app.
 <AuthorizeView>
@@ -21,6 +22,8 @@ Welcome to your new app.
 @code {
     private IEnumerable<Claim> claims = Enumerable.Empty<Claim>();
 
+    private string UserId {get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider
@@ -28,9 +31,10 @@ Welcome to your new app.
 
         if(authState.User.Identity?.IsAuthenticated ?? false)
         {
-            var user = authState.User;
+            var user = authState.User?.Identity as ClaimsIdentity;
+            UserId = user?.Claims?.FirstOrDefault(x => x.Type == "oid")?.Value;
 
-            claims = user.Claims;
+            claims = user?.Claims ?? Enumerable.Empty<Claim>();
         }
 
     }

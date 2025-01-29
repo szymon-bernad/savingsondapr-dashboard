@@ -26,6 +26,7 @@ public class CustomAccountFactory(
 
             if (userIdentity is not null)
             {
+                userIdentity.AddClaim(new Claim("oid", account?.Oid ?? string.Empty));
                 account?.Roles?.ForEach((role) =>
                 {
                     userIdentity.AddClaim(new Claim("role", role));
