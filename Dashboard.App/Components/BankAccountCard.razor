@@ -1,16 +1,16 @@
 ﻿@using Dashboard.App.Models
-<div class="card">
-    <div class="card-header bg-dark">
+<div class="card m-3">
+    <div class="card-header">
         <h5 class="card-title">
             @(AccountDto?.AccountRef ?? "Unknown...")
         </h5>
     </div>
-    <div class="card-body bg-dark">
+    <div class="card-body">
             <div class="row">
                 <div class="col-6">
                     <p class="card-text">Account Number: @AccountDto?.AccountId</p>
                     <p class="card-text">Account Type: @AccountDto?.AccountType</p>
-                    <p class="card-text">Balance: @AccountDto?.TotalBalance</p>
+                    <p class="card-text">Balance: @AccountDto?.TotalBalance [@AccountDto?.Currency]</p>
                 </div>
             </div>
     </div>

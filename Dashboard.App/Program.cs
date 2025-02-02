@@ -9,17 +9,20 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+builder.Configuration.AddJsonFile("appsettings.json");
+var cfgBaseUrl = builder.Configuration.GetValue<string>("Dashboard:BaseUrl") ?? "http://localhost:5170";
+
 builder.Services.AddTransient<CustomAuthMessageHandler>(svc =>
 {
     var authUrls = new List<string>
     {
         builder.HostEnvironment.BaseAddress,
-        "http://localhost:5170"
+        cfgBaseUrl
     };
     return new CustomAuthMessageHandler(authUrls, svc.GetRequiredService<IAccessTokenProvider>(),
         svc.GetRequiredService<NavigationManager>());
 });
-builder.Services.AddHttpClient("Dashboard.API", client => client.BaseAddress = new Uri("http://localhost:5170"))
+builder.Services.AddHttpClient("Dashboard.API", client => client.BaseAddress = new Uri(cfgBaseUrl))
             .AddHttpMessageHandler<CustomAuthMessageHandler>();
 
         // Supply HttpClient instances that include access tokens when making requests to the server project

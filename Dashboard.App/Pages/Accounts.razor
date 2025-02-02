@@ -10,26 +10,37 @@
 @using System.Collections.Generic
 
 <PageTitle>Accounts</PageTitle>
+<Modal @ref="modal"/>
 
 <AuthorizeView>
+ <div class="container-fluid my-2">
+        <Button Color="ButtonColor.Primary" @onclick="ShowNewExchangeModal">New Currency Exchange...</Button>
+ </div>
+ @if(!string.IsNullOrEmpty(SuccessMessage))
+{
+    <div class="alert alert-success my-3" role="alert">
+        @SuccessMessage
+    </div>
+}
+
 <div class="container-fluid">
 
     @foreach (var acc in BankAccounts)
-    {
-        <div class="row mb-3">
-        <BankAccountCard AccountDto="acc" />
-        </div>
-    }
-</div>
+        {
+            <div class="row mb-3">
+                <BankAccountCard AccountDto="acc" />
+            </div>
+        }
+    </div>
 </AuthorizeView>
 
-
-
-
 @code {
+
+    private Modal modal = default!;
+
     private IList<BankAccountDto> BankAccounts { get; set; } = Enumerable.Empty<BankAccountDto>().ToList();
     private string UserId { get; set; } = string.Empty;
-    private const string BackEndBaseUrl = "http://localhost:5170";
+    private string? SuccessMessage = default;
 
     protected override async Task OnInitializedAsync()
     {
@@ -38,27 +49,58 @@
 
         if (authState.User.Identity?.IsAuthenticated ?? false)
         {
-            UserId = (authState.User?.Identity as ClaimsIdentity)?.Claims?.FirstOrDefault(x => x.Type == "oid")?.Value;
+            UserId = (authState.User?.Identity as ClaimsIdentity)?.Claims?.FirstOrDefault(x => x.Type == "oid")?.Value ?? string.Empty;
             try
             {
-                var accounts = await Http.GetFromJsonAsync<ICollection<BankAccountDto>>($"/api/users/{UserId}/accounts");
-                foreach(var acc in accounts)
+                if (!string.IsNullOrWhiteSpace(UserId))
                 {
-                    BankAccounts.Add(acc);
+                    var accounts = (await Http.GetFromJsonAsync<ICollection<BankAccountDto>>($"/api/users/{UserId}/accounts"))
+                                    ?? [];
+                    foreach (var acc in accounts)
+                    {
+                        BankAccounts.Add(acc);
+                    }
                 }
-
-                BankAccounts.Add(new BankAccountDto { AccountId = "2", AccountRef = "654321", AccountType = "Current", TotalBalance = 2000 });
-                BankAccounts.Add(new BankAccountDto { AccountId = "3", AccountRef = "987654", AccountType = "Joint", TotalBalance = 3000 });
-                BankAccounts.Add(new BankAccountDto { AccountId = "4", AccountRef = "456789", AccountType = "Savings", TotalBalance = 4000 });
-                BankAccounts.Add(new BankAccountDto { AccountId = "5", AccountRef = "789456", AccountType = "Current", TotalBalance = 5000 });
-                BankAccounts.Add(new BankAccountDto { AccountId = "6", AccountRef = "321654", AccountType = "Joint", TotalBalance = 6000 });
-                BankAccounts.Add(new BankAccountDto { AccountId = "1", AccountRef = "123456", AccountType = "Savings", TotalBalance = 1000 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Failed to fetch account for UserId=[{UserId}]: {ex.Message}");
             }
+        }
+    }
 
+    private async Task ShowNewExchangeModal()
+    {
+        var parameters = new Dictionary<string, object>();
+        parameters.Add("BankAccounts", BankAccounts);
+        parameters.Add("OnClickCallback", EventCallback.Factory.Create<CurrencyExchangeOrderSummary>(this, ModalConfirmedAsync));
+        await modal.ShowAsync<CurrencyExchangeNew>(title: "New Exchange Details", parameters: parameters);
+    }
+
+    private async Task ModalConfirmedAsync(CurrencyExchangeOrderSummary order)
+    {
+        Console.WriteLine($"Order: {order.DebtorAccountRef} => {order.BeneficiaryAccountRef} : {order.SourceAmount}");
+        await modal.HideAsync();
+
+        var debtorAcc = BankAccounts.FirstOrDefault(x => x.AccountRef == order.DebtorAccountRef);
+        var beneficiaryAcc = BankAccounts.FirstOrDefault(x => x.AccountRef == order.BeneficiaryAccountRef);
+
+        if (debtorAcc is not null && beneficiaryAcc is not null)
+        {
+            var exchangeRequest = new CurrencyExchangeRequest(
+                $"{UserId}-{DateTime.UtcNow:s}",
+                debtorAcc.AccountRef,
+                beneficiaryAcc.AccountRef,
+                $"{debtorAcc.Currency}",
+                $"{beneficiaryAcc.Currency}",
+                order.SourceAmount);
+
+            var res = await Http.PostAsJsonAsync<CurrencyExchangeRequest>($"/api/currency/exchange-order", exchangeRequest);
+            if (res.IsSuccessStatusCode)
+            {
+                SuccessMessage = "Exchange order has been placed successfully!";
+                StateHasChanged();
+            }
         }
     }
 }

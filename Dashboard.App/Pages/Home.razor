@@ -7,7 +7,7 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, @UserId!</h1>
+<h1>Hello, @(UserId ?? "Stranger")!</h1>
 
 Welcome to your new app.
 <AuthorizeView>
@@ -32,7 +32,7 @@ Welcome to your new app.
         if(authState.User.Identity?.IsAuthenticated ?? false)
         {
             var user = authState.User?.Identity as ClaimsIdentity;
-            UserId = user?.Claims?.FirstOrDefault(x => x.Type == "oid")?.Value;
+            UserId = user?.Claims?.FirstOrDefault(x => x.Type == "name")?.Value;
 
             claims = user?.Claims ?? Enumerable.Empty<Claim>();
         }

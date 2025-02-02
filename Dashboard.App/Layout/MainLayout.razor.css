@@ -1,28 +1,22 @@
+
+
 .page {
     position: relative;
     display: flex;
     flex-direction: column;
 }
 
-main {
-    flex: 1;
-    background-color: #37373f;
-    font-family: Consolas, monospace;
-    color: #cfffcf;
-}
-
 .sidebar {
-    background-image: linear-gradient(180deg, #5154a8ff, #57575e9f);
+    background-image: linear-gradient(180deg, #51a88bff, #57575eff);
 }
 
 .top-row {
-    background-color: #5154a8ff;
+    background-color: #51a88b;
     border-bottom: 1px solid #d6d5d5;
     justify-content: flex-end;
     height: 3.5rem;
     display: flex;
     align-items: center;
-    color: #cfffcf;
 }
     .top-row ::deep a, .top-row ::deep .btn-link {
         white-space: nowrap;

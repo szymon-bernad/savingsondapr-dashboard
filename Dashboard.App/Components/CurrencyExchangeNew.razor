@@ -1,0 +1,110 @@
+﻿@using BlazorBootstrap
+@using Dashboard.App.Models
+
+<div class="row my-3">
+    <InputSelect @bind-Value="DebtorAccountRef" @bind-Value:after="OnDebtorChanged"
+    DisplayName="Debtor">
+        <option value="">--Select--</option>
+        @foreach (var acc in BankAccounts.Where(a => a.TotalBalance > 0m))
+        {
+            <option value=@acc.AccountRef>@acc.AccountRef [@acc.TotalBalance @acc.Currency]</option>
+        }
+    </InputSelect>
+</div>
+<div class="row mb-3">
+    @if (string.IsNullOrEmpty(DebtorAccountRef))
+    {
+        <label class="form-label">Select debtor first</label>
+    }
+    else
+    {
+        <InputSelect @ref="BeneficiarySelect" @bind-Value="BeneficiaryAccountRef" DisplayName="Beneficiary">
+            @foreach (var acc in BeneficiaryAccounts)
+            {
+                <option value=@acc.AccountRef>@acc.AccountRef [@acc.Currency]</option>
+            }
+        </InputSelect>
+    }
+
+</div>
+<div class="row mb-3">
+    <label class="form-label">Enter Source Amount</label>
+    <CurrencyInput Disabled=@(string.IsNullOrEmpty(DebtorAccountRef)) HideCurrencySymbol=true TValue="decimal" @bind-Value="@SourceAmount" @bind-Value:after="OnSourceAmountChanged"/>
+    <RangeInput Disabled=@(string.IsNullOrEmpty(DebtorAccountRef)) TValue="int" @bind-Value="MaxAmountPercentage" @bind-Value:after="OnMaxAmountPercentageChanged" Min=" 1" Max="100" />
+</div>
+<div class="row my-4">
+    <Button Color="ButtonColor.Success" Disabled=@(Order is null) @onclick="ConfirmedAsync">Confirm</Button>
+</div>
+
+
+@code {
+    private string? DebtorAccountRef { get; set; } = default;
+    private string? BeneficiaryAccountRef { get; set; } = default;
+    private decimal SourceAmount { get; set; } = default;
+    private decimal MaxAmount { get; set; } = default;
+    private int MaxAmountPercentage { get; set; } = default;
+
+    private CurrencyExchangeOrderSummary? Order { get; set; }
+
+    private InputSelect<string> BeneficiarySelect = default!;
+
+    [Parameter] public EventCallback<CurrencyExchangeOrderSummary> OnClickCallback { get; set; }
+
+    [Parameter] public ICollection<BankAccountDto> BankAccounts { get; set; } = Enumerable.Empty<BankAccountDto>().ToList();
+
+    private ICollection<BankAccountDto> BeneficiaryAccounts { get; set; } = Enumerable.Empty<BankAccountDto>().ToList();
+
+    protected override void OnInitialized()
+    {
+        // get employee with {EmployeeId} from DB
+
+        base.OnInitialized();
+    }
+
+    protected void OnDebtorChanged()
+    {
+        if (DebtorAccountRef is not null)
+        {
+            var debtorAcc = BankAccounts.FirstOrDefault(x => x.AccountRef == DebtorAccountRef);
+            if (debtorAcc is not null)
+            {
+                MaxAmount = debtorAcc.TotalBalance;
+                BeneficiaryAccounts = BankAccounts.Where(x => x.AccountRef != DebtorAccountRef).ToList();
+                BeneficiaryAccountRef = BeneficiaryAccounts.FirstOrDefault()?.AccountRef;
+            }
+            else 
+            {
+                DebtorAccountRef = null;
+            }
+        }
+        StateHasChanged();
+    }
+
+    protected void OnSourceAmountChanged()
+    {
+        if (SourceAmount > 0 && !string.IsNullOrEmpty(DebtorAccountRef) && !string.IsNullOrEmpty(BeneficiaryAccountRef))
+        {
+            Order = new CurrencyExchangeOrderSummary(DebtorAccountRef, BeneficiaryAccountRef, SourceAmount);
+        }
+        else
+        {
+            Order = null;
+        }
+
+        StateHasChanged();
+    }
+
+    protected void OnMaxAmountPercentageChanged()
+    {
+        if (MaxAmountPercentage > 0)
+        {
+            SourceAmount = Math.Round(MaxAmount * MaxAmountPercentage / 100, 2, MidpointRounding.AwayFromZero);
+            OnSourceAmountChanged();
+        }
+    }
+
+    protected async Task ConfirmedAsync(EventArgs e)
+    {
+        await OnClickCallback.InvokeAsync(Order);
+    }
+}
