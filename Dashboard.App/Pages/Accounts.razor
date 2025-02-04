@@ -15,6 +15,7 @@
 <AuthorizeView>
  <div class="container-fluid my-2">
         <Button Color="ButtonColor.Primary" @onclick="ShowNewExchangeModal">New Currency Exchange...</Button>
+        <Button Color="ButtonColor.Info" @onclick="FetchAccountsAsync">Refresh</Button>
  </div>
  @if(!string.IsNullOrEmpty(SuccessMessage))
 {
@@ -52,15 +53,7 @@
             UserId = (authState.User?.Identity as ClaimsIdentity)?.Claims?.FirstOrDefault(x => x.Type == "oid")?.Value ?? string.Empty;
             try
             {
-                if (!string.IsNullOrWhiteSpace(UserId))
-                {
-                    var accounts = (await Http.GetFromJsonAsync<ICollection<BankAccountDto>>($"/api/users/{UserId}/accounts"))
-                                    ?? [];
-                    foreach (var acc in accounts)
-                    {
-                        BankAccounts.Add(acc);
-                    }
-                }
+                await FetchAccountsAsync();
             }
             catch (Exception ex)
             {
@@ -99,6 +92,26 @@
             if (res.IsSuccessStatusCode)
             {
                 SuccessMessage = "Exchange order has been placed successfully!";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task FetchAccountsAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(UserId))
+        {
+            BankAccounts.Clear();
+
+            var accounts = (await Http.GetFromJsonAsync<ICollection<BankAccountDto>>($"/api/users/{UserId}/accounts"))
+                            ?? [];
+            foreach (var acc in accounts)
+            {
+                BankAccounts.Add(acc);
+            }
+
+            if (BankAccounts.Count > 0)
+            {
                 StateHasChanged();
             }
         }

@@ -1,5 +1,6 @@
 ﻿@using BlazorBootstrap
 @using Dashboard.App.Models
+@inject HttpClient Http
 
 <div class="row my-3">
     <InputSelect @bind-Value="DebtorAccountRef" @bind-Value:after="OnDebtorChanged"
@@ -11,6 +12,12 @@
         }
     </InputSelect>
 </div>
+<div class="row my-3">
+    <label class="form-label">Enter Source Amount</label>
+    <RangeInput Disabled=@(string.IsNullOrEmpty(DebtorAccountRef)) TValue="int" @bind-Value="MaxAmountPercentage" @bind-Value:after="OnMaxAmountPercentageChanged" Min=" 1" Max="100" />
+    <CurrencyInput Disabled=@(string.IsNullOrEmpty(DebtorAccountRef)) HideCurrencySymbol=true TValue="decimal" @bind-Value="@SourceAmount" @bind-Value:after="OnSourceAmountChanged"/>
+</div>
+
 <div class="row mb-3">
     @if (string.IsNullOrEmpty(DebtorAccountRef))
     {
@@ -18,7 +25,7 @@
     }
     else
     {
-        <InputSelect @ref="BeneficiarySelect" @bind-Value="BeneficiaryAccountRef" DisplayName="Beneficiary">
+        <InputSelect @ref="BeneficiarySelect" @bind-Value="BeneficiaryAccountRef" @bind-Value:after="OnBeneficiaryChanged" DisplayName="Beneficiary">
             @foreach (var acc in BeneficiaryAccounts)
             {
                 <option value=@acc.AccountRef>@acc.AccountRef [@acc.Currency]</option>
@@ -27,20 +34,33 @@
     }
 
 </div>
+
 <div class="row mb-3">
-    <label class="form-label">Enter Source Amount</label>
-    <CurrencyInput Disabled=@(string.IsNullOrEmpty(DebtorAccountRef)) HideCurrencySymbol=true TValue="decimal" @bind-Value="@SourceAmount" @bind-Value:after="OnSourceAmountChanged"/>
-    <RangeInput Disabled=@(string.IsNullOrEmpty(DebtorAccountRef)) TValue="int" @bind-Value="MaxAmountPercentage" @bind-Value:after="OnMaxAmountPercentageChanged" Min=" 1" Max="100" />
+    <label class="form-label">You'll receive: @(TargetAmount == 0m ? "--" : $"{TargetAmount}")</label>
 </div>
+
+
 <div class="row my-4">
     <Button Color="ButtonColor.Success" Disabled=@(Order is null) @onclick="ConfirmedAsync">Confirm</Button>
 </div>
 
 
 @code {
+
     private string? DebtorAccountRef { get; set; } = default;
     private string? BeneficiaryAccountRef { get; set; } = default;
+    private BankAccountDto? DebtorAccount { get; set; } = default;
+    private BankAccountDto? BeneficiaryAccount { get; set; } = default;
+
     private decimal SourceAmount { get; set; } = default;
+    private decimal TargetAmount { get; set; } = default;
+
+    private SemaphoreSlim RatesSemaphore { get; set; } = new SemaphoreSlim(1, 1);
+    private bool IsRatesFetchingScheduled { get; set; } = false;
+    private Timer? RateRefreshTimer = default;
+
+    private CurrencyExchangeResponse? ExchangeResponse { get; set; } = default;
+
     private decimal MaxAmount { get; set; } = default;
     private int MaxAmountPercentage { get; set; } = default;
 
@@ -54,23 +74,20 @@
 
     private ICollection<BankAccountDto> BeneficiaryAccounts { get; set; } = Enumerable.Empty<BankAccountDto>().ToList();
 
-    protected override void OnInitialized()
-    {
-        // get employee with {EmployeeId} from DB
-
-        base.OnInitialized();
-    }
 
     protected void OnDebtorChanged()
     {
+        SourceAmount = 0m;
+        TargetAmount = 0m;
         if (DebtorAccountRef is not null)
         {
-            var debtorAcc = BankAccounts.FirstOrDefault(x => x.AccountRef == DebtorAccountRef);
-            if (debtorAcc is not null)
+            DebtorAccount = BankAccounts.FirstOrDefault(x => x.AccountRef == DebtorAccountRef);
+            if (DebtorAccount is not null)
             {
-                MaxAmount = debtorAcc.TotalBalance;
+                MaxAmount = DebtorAccount.TotalBalance;
                 BeneficiaryAccounts = BankAccounts.Where(x => x.AccountRef != DebtorAccountRef).ToList();
                 BeneficiaryAccountRef = BeneficiaryAccounts.FirstOrDefault()?.AccountRef;
+                BeneficiaryAccount = BankAccounts.FirstOrDefault(x => x.AccountRef == BeneficiaryAccountRef);
             }
             else 
             {
@@ -80,11 +97,21 @@
         StateHasChanged();
     }
 
-    protected void OnSourceAmountChanged()
+    protected void OnBeneficiaryChanged()
     {
-        if (SourceAmount > 0 && !string.IsNullOrEmpty(DebtorAccountRef) && !string.IsNullOrEmpty(BeneficiaryAccountRef))
+        TargetAmount = 0m;
+        BeneficiaryAccount = BankAccounts.FirstOrDefault(x => x.AccountRef == BeneficiaryAccountRef);
+
+        StateHasChanged();
+    }
+
+    protected async Task OnSourceAmountChanged()
+    {
+        TargetAmount = 0m;
+        if (SourceAmount > 0 && DebtorAccount is not null && BeneficiaryAccount is not null)
         {
             Order = new CurrencyExchangeOrderSummary(DebtorAccountRef, BeneficiaryAccountRef, SourceAmount);
+            CalculateTargetAmount(DebtorAccount!.Currency, BeneficiaryAccount!.Currency);
         }
         else
         {
@@ -92,19 +119,87 @@
         }
 
         StateHasChanged();
+
+        if (SourceAmount > 0)
+        {
+            await OnRatesRequestedAsync();
+        }
     }
 
-    protected void OnMaxAmountPercentageChanged()
+    protected async Task OnMaxAmountPercentageChanged()
     {
         if (MaxAmountPercentage > 0)
         {
             SourceAmount = Math.Round(MaxAmount * MaxAmountPercentage / 100, 2, MidpointRounding.AwayFromZero);
-            OnSourceAmountChanged();
+            await OnSourceAmountChanged();
         }
+    }
+
+    protected async Task OnRatesRequestedAsync()
+    {
+        if (IsRatesFetchingScheduled)
+        {
+            return;
+        }
+
+        await RatesSemaphore.WaitAsync();
+        if (!IsRatesFetchingScheduled)
+        {
+            IsRatesFetchingScheduled = true;
+            if (ExchangeResponse is null || ExchangeResponse.Timestamp < DateTime.UtcNow.AddSeconds(-5))
+            {
+                RateRefreshTimer = new Timer(async _ => await FetchRatesAsync(), null, 0, Timeout.Infinite);
+            }
+            else
+            {
+                var dt = (DateTime.UtcNow - ExchangeResponse!.Timestamp.ToUniversalTime());
+                Console.WriteLine($"Rates Query scheduled in {5000 - (int)dt.TotalMilliseconds} ms...");
+                RateRefreshTimer.Change(5000 - (int)dt.TotalMilliseconds, Timeout.Infinite);
+            }
+        }
+        RatesSemaphore.Release();
+    }
+
+    protected async Task FetchRatesAsync()
+    {
+        if (DebtorAccount is not null && BeneficiaryAccount is not null && SourceAmount > 0m)
+        {
+            Console.WriteLine($"Rates Query sent for SourceAmount = {SourceAmount}");
+            var res = await Http.PostAsJsonAsync<ExchangeRateQuery>(
+                        $"/api/currency/exchange-query",
+                        new ExchangeRateQuery(DebtorAccount!.Currency, BeneficiaryAccount!.Currency, SourceAmount));
+
+            if (res.IsSuccessStatusCode)
+            {
+                ExchangeResponse = await res.Content.ReadFromJsonAsync<CurrencyExchangeResponse>();
+
+                if (ExchangeResponse is not null)
+                {
+                    ExchangeResponse = ExchangeResponse with { Timestamp = DateTime.UtcNow };
+
+                    CalculateTargetAmount(DebtorAccount!.Currency, BeneficiaryAccount!.Currency);
+                    StateHasChanged();
+                }
+            }
+        }
+
+        await RatesSemaphore.WaitAsync();
+        IsRatesFetchingScheduled = false;
+        RatesSemaphore.Release();
     }
 
     protected async Task ConfirmedAsync(EventArgs e)
     {
         await OnClickCallback.InvokeAsync(Order);
+    }
+
+    protected void CalculateTargetAmount(string sourceCurrency, string targetCurrency)
+    {
+        if (ExchangeResponse is not null && 
+            ExchangeResponse.ExchangeType.StartsWith(sourceCurrency) &&
+            ExchangeResponse.ExchangeType.EndsWith(targetCurrency))
+        {
+            TargetAmount = Math.Round(SourceAmount * ExchangeResponse.Rate, 2, MidpointRounding.ToEven);
+        }
     }
 }
