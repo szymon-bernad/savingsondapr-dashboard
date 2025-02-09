@@ -25,14 +25,11 @@
 }
 
 <div class="container-fluid">
-
     @foreach (var acc in BankAccounts)
-        {
-            <div class="row mb-3">
-                <BankAccountCard AccountDto="acc" />
-            </div>
-        }
-    </div>
+    {
+            <BankAccountCard AccountDto="acc" />
+    }
+</div>
 </AuthorizeView>
 
 @code {

@@ -5,11 +5,11 @@ namespace Dashboard.App;
 
 public class CustomAuthMessageHandler : AuthorizationMessageHandler
 {
-    public CustomAuthMessageHandler(IEnumerable<string> authUrls, IAccessTokenProvider provider,
+    public CustomAuthMessageHandler(IEnumerable<string> authUrls, IEnumerable<string> defaultScopes, IAccessTokenProvider provider,
         NavigationManager navigation)
         : base(provider, navigation)
     {
         ConfigureHandler(
-            authorizedUrls: authUrls);
+            authorizedUrls: authUrls, scopes: defaultScopes);
     }
 }

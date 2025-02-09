@@ -5,13 +5,9 @@ using Microsoft.AspNetCore.Components.WebAssembly.Authentication.Internal;
 namespace Dashboard.App.CustomAuth;
 
 public class CustomAccountFactory(
-        IAccessTokenProviderAccessor accessor,
-        IServiceProvider serviceProvider, ILogger<CustomAccountFactory> logger,
-        IConfiguration config)
-    : AccountClaimsPrincipalFactory<CustomAccount>(accessor)
+        IAccessTokenProviderAccessor accessor)
+        : AccountClaimsPrincipalFactory<CustomAccount>(accessor)
 {
-    private readonly ILogger<CustomAccountFactory> logger = logger;
-    private readonly IServiceProvider serviceProvider = serviceProvider;
 
     public override async ValueTask<ClaimsPrincipal> CreateUserAsync(
         CustomAccount account,

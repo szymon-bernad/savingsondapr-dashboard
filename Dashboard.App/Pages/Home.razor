@@ -10,14 +10,6 @@
 <h1>Hello, @(UserId ?? "Stranger")!</h1>
 
 Welcome to your new app.
-<AuthorizeView>
-    <ul>
-        @foreach (var claim in claims)
-        {
-            <li>@claim.Type: @claim.Value</li>
-        }
-    </ul>
-</AuthorizeView>
 
 @code {
     private IEnumerable<Claim> claims = Enumerable.Empty<Claim>();
@@ -32,9 +24,13 @@ Welcome to your new app.
         if(authState.User.Identity?.IsAuthenticated ?? false)
         {
             var user = authState.User?.Identity as ClaimsIdentity;
-            UserId = user?.Claims?.FirstOrDefault(x => x.Type == "name")?.Value;
+            UserId = user?.Claims?.FirstOrDefault(x => x.Type == "name")?.Value ?? "Stranger";
 
             claims = user?.Claims ?? Enumerable.Empty<Claim>();
+            foreach (var claim in claims)
+            {
+                Console.WriteLine($"{claim.Type}: {claim.Value}");
+            }
         }
 
     }
