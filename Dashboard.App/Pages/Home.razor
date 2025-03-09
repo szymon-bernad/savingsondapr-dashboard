@@ -9,7 +9,7 @@
 
 <h1>Hello, @(UserId ?? "Stranger")!</h1>
 
-Welcome to your new app.
+<div>Welcome to your new app.</div>
 
 @code {
     private IEnumerable<Claim> claims = Enumerable.Empty<Claim>();
@@ -32,6 +32,5 @@ Welcome to your new app.
                 Console.WriteLine($"{claim.Type}: {claim.Value}");
             }
         }
-
     }
 }
