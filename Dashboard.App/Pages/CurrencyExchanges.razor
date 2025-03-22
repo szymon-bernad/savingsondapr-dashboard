@@ -4,6 +4,10 @@
 @attribute [Authorize]
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using BlazorBootstrap;
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Kiota.Abstractions.Authentication
+@using Microsoft.Kiota.Http.HttpClientLibrary
+@using SavingsOnDapr.Dashboard.Client
 
 <PageTitle>Currency Exchanges</PageTitle>
 
@@ -63,12 +67,12 @@ else
 }
 
 @code {
-    [SupplyParameterFromForm]
-    private Dashboard? Model { get; set; }
+        [SupplyParameterFromForm]
+        private Dashboard? Model { get; set; }
 
 
     private ICollection<KeyValuePair<string, Tuple<string, string>>> ExchangeTypes = [
-        new KeyValuePair<string, Tuple<string, string>>("EUR => USD", new Tuple<string, string>("EUR", "USD")),
+    new KeyValuePair<string, Tuple<string, string>>("EUR => USD", new Tuple<string, string>("EUR", "USD")),
     new KeyValuePair<string, Tuple<string, string>>("USD => EUR", new Tuple<string, string>("USD", "EUR")),
     new KeyValuePair<string, Tuple<string, string>>("USD => GBP", new Tuple<string, string>("USD", "GBP")),
     new KeyValuePair<string, Tuple<string, string>>("USD => PLN", new Tuple<string, string>("USD", "PLN")),
@@ -81,9 +85,11 @@ else
 
     private string LoadingMessage = "Loading...";
 
-    private const string BackEndBaseUrl = "http://localhost:5170/api";
+    private const string BackEndBaseUrl = "http://localhost:5170/";
 
     private readonly HttpClient _httpClient = new HttpClient();
+
+    private readonly DashClient _dashClient = new DashClient(new HttpClientRequestAdapter(authenticationProvider: new AnonymousAuthenticationProvider(), httpClient: new HttpClient { BaseAddress = new Uri(BackEndBaseUrl) }));
 
     private readonly Random _random = new Random();
 
@@ -104,49 +110,47 @@ else
     {
         if (Model?.ExchangeType is not null)
         {
-            var exchTypeValue = ExchangeTypes.FirstOrDefault(x => x.Key == Model.ExchangeType).Value;
-            var urlPath = $"{BackEndBaseUrl}/currency-exchange-summary/{exchTypeValue.Item1}/{exchTypeValue.Item2}/{Model.FilterDate:yyyy-MM-dd}";
-
-            if (Model.FilterDateEnd.HasValue && Model.FilterDateEnd.Value > Model.FilterDate)
-            {
-                urlPath += $"?toDate={Model.FilterDateEnd:yyyy-MM-dd}";
-            }
             Model.IsLoading = true;
 
-            await FetchDataAsync(urlPath);
+            var exchTypeValue = ExchangeTypes.FirstOrDefault(x => x.Key == Model.ExchangeType).Value;
+            var requestBuilder = _dashClient.Api
+                                    .CurrencyExchangeSummary[exchTypeValue.Item1]
+                                                            [exchTypeValue.Item2]
+                                                            [new DateTimeOffset(Model.FilterDate, new TimeOnly(0, 0, 0), TimeSpan.Zero)];
+
+            var requestFunc = async () => await (Model.FilterDateEnd.HasValue && Model.FilterDateEnd.Value > Model.FilterDate ?
+                requestBuilder.GetAsync(b =>
+                {
+                    b.QueryParameters.ToDate = new DateTimeOffset(Model.FilterDateEnd.Value, new TimeOnly(0, 0, 0), TimeSpan.Zero);
+                    b.Headers.Add("CacheControl", "no-cache");
+                }) :
+                requestBuilder.GetAsync(b => b.Headers.Add("CacheControl", "no-cache")));
+
+            await FetchDataAsync(requestFunc);
         }
     }
 
-    protected async Task FetchDataAsync(string dataUrl)
+    protected async Task FetchDataAsync(Func<Task<SavingsOnDapr.Dashboard.Client.Models.CurrencyExchangeSummaryResponse?>> requestTask)
     {
-        if (!string.IsNullOrEmpty(dataUrl) && !dataUrl.Equals(Model.CurrentDataUrl,StringComparison.OrdinalIgnoreCase))
-        {
-            Model.CurrentDataUrl = dataUrl;
-            Model.Data = null;
-            var response = await _httpClient.GetAsync(dataUrl);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.Accepted)
-            {
-                RateRefreshTimer = new Timer(async _ => await FetchDataAsync(dataUrl), null, 5000, Timeout.Infinite);
-                Model.Data = null;
-
-            }
-            else if (response.IsSuccessStatusCode)
-            {
-                var data = await response.Content.ReadFromJsonAsync<CurrencyExchangeSummaryResponse>();
-                if (data is not null)
-                {
-                    Model.Data = data;
-                }
-            }
+        Model.Data = null;
+        Console.WriteLine($"Fetching data for {Model?.ExchangeType}...");
+        var response = await requestTask();
             
-            if(response.IsSuccessStatusCode || Model.Data is null)
+        if(response is not null)
+        {
+            Model.Data = new CurrencyExchangeSummaryResponse
             {
-                Model.CurrentDataUrl = string.Empty;
-            }
+                ResponseKey = response.ResponseKey,
+                ColumnNames = response.ColumnNames.ToArray(),
+                ColumnValues = response.Entries.ToDictionary(e => e.EntryName, e => e.ColumnValues.ToArray()),
+            };
+        }
+        else
+        {
+            RateRefreshTimer = new Timer(async _ => await FetchDataAsync(requestTask), null, 5000, Timeout.Infinite);
         }
 
-        if (Model.Data is not null && Model.Data.ColumnValues.Any())
+        if (Model.Data is not null && Model.Data.ColumnNames.Any())
         {
             Model.IsLoading = false;
             var dateIndex = Array.IndexOf(Model.Data.ColumnNames, "Date");
