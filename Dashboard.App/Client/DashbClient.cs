@@ -18,7 +18,7 @@ namespace SavingsOnDapr.Dashboard.Client
     /// The main entry point of the SDK, exposes the configuration and the fluent API.
     /// </summary>
     [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
-    public partial class DashClient : BaseRequestBuilder
+    public partial class DashbClient : BaseRequestBuilder
     {
         /// <summary>The api property</summary>
         public global::SavingsOnDapr.Dashboard.Client.Api.ApiRequestBuilder Api
@@ -31,10 +31,10 @@ namespace SavingsOnDapr.Dashboard.Client
             get => new global::SavingsOnDapr.Dashboard.Client.Healthz.HealthzRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>
-        /// Instantiates a new <see cref="global::SavingsOnDapr.Dashboard.Client.DashClient"/> and sets the default values.
+        /// Instantiates a new <see cref="global::SavingsOnDapr.Dashboard.Client.DashbClient"/> and sets the default values.
         /// </summary>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public DashClient(IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}", new Dictionary<string, object>())
+        public DashbClient(IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}", new Dictionary<string, object>())
         {
             ApiClientBuilder.RegisterDefaultSerializer<JsonSerializationWriterFactory>();
             ApiClientBuilder.RegisterDefaultSerializer<TextSerializationWriterFactory>();

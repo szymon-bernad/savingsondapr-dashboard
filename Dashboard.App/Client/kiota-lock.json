@@ -1,9 +1,9 @@
 {
-  "descriptionHash": "3623DB19CC8AC99C124CC9C0FE04FEEC26BDCE4B38EDA732C95CF2D2F99E653E3D011D39496C302F7ADC68BDB20C5E3CC91183C8E43F2982B8BA9499034B14BD",
-  "descriptionLocation": "../Dashboard.Api/obj/swagger.json",
+  "descriptionHash": "B1105C651C491CE411CB6130E3D224E71794B743C6EA0EB3395300BCD64D8CB21E3F09C08BD4E9B0D2860A4AAA20FE26E8916D3FD4BAA3D447BF4AF625D34875",
+  "descriptionLocation": "swagger.json",
   "lockFileVersion": "1.0.0",
   "kiotaVersion": "1.24.1",
-  "clientClassName": "DashClient",
+  "clientClassName": "DashbClient",
   "typeAccessModifier": "Public",
   "clientNamespaceName": "SavingsOnDapr.Dashboard.Client",
   "language": "CSharp",

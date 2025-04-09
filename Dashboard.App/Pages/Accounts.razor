@@ -1,13 +1,13 @@
 ﻿@page "/accounts"
-@using Dashboard.App.Models
 @using Microsoft.AspNetCore.Authorization
 @inject HttpClient Http
 @attribute [Authorize]
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using BlazorBootstrap;
 @using System.Security.Claims
-@using Dashboard.App.Components
 @using System.Collections.Generic
+@using global::Dashboard.App.Models
+@using global::Dashboard.App.Components
 
 <PageTitle>Accounts</PageTitle>
 <Modal @ref="modal"/>

@@ -89,7 +89,7 @@ else
 
     private readonly HttpClient _httpClient = new HttpClient();
 
-    private readonly DashClient _dashClient = new DashClient(new HttpClientRequestAdapter(authenticationProvider: new AnonymousAuthenticationProvider(), httpClient: new HttpClient { BaseAddress = new Uri(BackEndBaseUrl) }));
+    private readonly DashbClient _dashClient = new DashbClient(new HttpClientRequestAdapter(authenticationProvider: new AnonymousAuthenticationProvider(), httpClient: new HttpClient { BaseAddress = new Uri(BackEndBaseUrl) }));
 
     private readonly Random _random = new Random();
 
@@ -117,6 +117,13 @@ else
                                     .CurrencyExchangeSummary[exchTypeValue.Item1]
                                                             [exchTypeValue.Item2]
                                                             [new DateTimeOffset(Model.FilterDate, new TimeOnly(0, 0, 0), TimeSpan.Zero)];
+
+            await (Model.FilterDateEnd.HasValue && Model.FilterDateEnd.Value > Model.FilterDate ?
+                requestBuilder.PostAsync(b =>
+                {
+                    b.QueryParameters.ToDate = new DateTimeOffset(Model.FilterDateEnd.Value, new TimeOnly(0, 0, 0), TimeSpan.Zero);
+                }) :
+                requestBuilder.PostAsync());
 
             var requestFunc = async () => await (Model.FilterDateEnd.HasValue && Model.FilterDateEnd.Value > Model.FilterDate ?
                 requestBuilder.GetAsync(b =>
@@ -180,7 +187,7 @@ else
                                     .ToList(),
                             BackgroundColor = new List<string> { "#51a88b" },
                             BorderColor = new List<string> { "#333" },
-                            BorderWidth = new List<double> { 1.0 },
+                            BorderWidth = new List<double> { 0.5 },
                     }]
                 };
 
