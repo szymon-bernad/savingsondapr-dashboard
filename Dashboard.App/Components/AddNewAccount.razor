@@ -1,0 +1,89 @@
+﻿@namespace Dashboard.App.Components
+
+@using BlazorBootstrap
+@using System.ComponentModel.DataAnnotations
+@using Dashboard.App.Models
+@using SavingsOnDapr.Dashboard.Client.Models
+
+<EditForm EditContext="editContext" OnValidSubmit="Submit">
+
+    <div class="row my-3">
+
+        <InputSelect @bind-Value="State.AccountCurrency"
+        DisplayName="Account Currency">
+            <option value="">--Select--</option>
+            <option value="@(Models.Currency.USD)"> USD </option>
+            <option value="@(Models.Currency.EUR)"> EUR </option>
+            <option value="@(Models.Currency.GBP)"> GBP </option>
+            <option value="@(Models.Currency.CAD)"> CAD </option>
+            <option value="@(Models.Currency.PLN)"> PLN </option>
+            <option value="@(Models.Currency.NOK)"> NOK </option>
+            <option value="@(Models.Currency.CHF)"> CHF </option>
+        </InputSelect>
+    </div>
+    <div class="row my-3">
+        <label class="form-label">Account Reference</label>
+        <TextInput @bind-Value="State.ExternalRef" @bind-Value:after="OnExternalRefChanged" Placeholder="Enter Account Reference" />
+    </div>
+    <div>
+        <ValidationMessage For="() => State.ExternalRef" />
+    </div>
+
+    <div class="row my-4">
+        <Button Color="ButtonColor.Success" Disabled=@(string.IsNullOrEmpty(State.ExternalRef)) type="ButtonType.Submit">Confirm</Button>
+    </div>
+</EditForm>
+
+
+
+
+@code {
+    [Parameter] public string UserId { get; init; } = default;
+    [Parameter] public string[] AccountRefs { get; init; } = [];
+    [Parameter] public EventCallback<CurrentAccountDto> OnClickCallback { get; set; }
+
+    private CurrentAccountDto? State;
+
+
+    private EditContext? editContext;
+
+
+    private ValidationMessageStore? messageStore;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        State = new CurrentAccountDto 
+        { 
+            UserId = UserId, 
+            ExternalRef = string.Empty 
+        };
+
+        editContext = new(State);
+        editContext.OnValidationRequested += HandleValidationRequested;
+        messageStore = new(editContext);
+    }
+
+    private void HandleValidationRequested(object? sender,
+        ValidationRequestedEventArgs args)
+    {
+        OnExternalRefChanged();
+    }
+
+    private void OnExternalRefChanged()
+    {
+        messageStore?.Clear();
+
+        // Custom validation logic
+        if (AccountRefs.Contains(State.ExternalRef))
+        {
+            messageStore?.Add(() => State.ExternalRef, "Account reference already exists.");
+        }
+    }
+
+    private async Task Submit() {
+        await OnClickCallback.InvokeAsync(State);
+    }
+
+}

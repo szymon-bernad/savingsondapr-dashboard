@@ -57,7 +57,7 @@ else
                     <span />
                 </div>
             </div>
-            <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+            <div class="container-fluid" style="display: flex; flex-direction: column; align-items: center; vertical-align: top; height: 100vh;">
                 <BarChart @ref="BarChart" hidden="@(Model.IsLoading ? "hidden" : null)" Width="920" WidthUnit=@Unit.Px Height="720" HeightUnit=@Unit.Px style="display: inline-block; margin: 0 auto" />
                 <Spinner Type="SpinnerType.Dots" Color="SpinnerColor.Success" Size="SpinnerSize.Large" Visible="@Model.IsLoading" style="position: absolute; margin: 0 auto" />
             </div>
@@ -172,19 +172,19 @@ else
                         {
                             Label = Model.ExchangeType,
                             Data = columnValues.Select(
-                                        e => {
-                                                if (Model.ValueType == ValueTypes[1] || Model.ValueType == ValueTypes[2])
-                                                {
-                                                    Decimal.TryParse(e[totalCountIndex], out var v);
-                                                    return (double?)v;
-                                                }
-                                                else
-                                                {
-                                                    Int32.TryParse(e[totalCountIndex], out var v);
-                                                    return (double?)v;
-                                                }
-                                            })
-                                    .ToList(),
+                                e => {
+                                        if (Model.ValueType == ValueTypes[1] || Model.ValueType == ValueTypes[2])
+                                        {
+                                            Decimal.TryParse(e[totalCountIndex], out var v);
+                                            return (double?)v;
+                                        }
+                                        else
+                                        {
+                                            Int32.TryParse(e[totalCountIndex], out var v);
+                                            return (double?)v;
+                                        }
+                                    })
+                            .ToList(),
                             BackgroundColor = new List<string> { "#51a88b" },
                             BorderColor = new List<string> { "#333" },
                             BorderWidth = new List<double> { 0.5 },

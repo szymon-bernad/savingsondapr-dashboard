@@ -6,6 +6,10 @@
 @using BlazorBootstrap;
 @using System.Security.Claims
 @using System.Collections.Generic
+@using Microsoft.Kiota.Abstractions.Authentication
+@using Microsoft.Kiota.Http.HttpClientLibrary
+@using SavingsOnDapr.Dashboard.Client
+@using ApiModels = SavingsOnDapr.Dashboard.Client.Models
 @using global::Dashboard.App.Models
 @using global::Dashboard.App.Components
 
@@ -13,23 +17,24 @@
 <Modal @ref="modal"/>
 
 <AuthorizeView>
- <div class="container-fluid my-2">
+    <div class="container-fluid my-2">
+        <Button Color="ButtonColor.Success" @onclick="ShowNewAccountModal">New Bank Account...</Button>
         <Button Color="ButtonColor.Primary" @onclick="ShowNewExchangeModal">New Currency Exchange...</Button>
         <Button Color="ButtonColor.Info" @onclick="FetchAccountsAsync">Refresh</Button>
- </div>
- @if(!string.IsNullOrEmpty(SuccessMessage))
-{
-    <div class="alert alert-success my-3" role="alert">
-        @SuccessMessage
     </div>
-}
-
-<div class="container-fluid">
-    @foreach (var acc in BankAccounts)
+    @if (!string.IsNullOrEmpty(SuccessMessage))
     {
-            <BankAccountCard AccountDto="acc" />
+        <div class="alert alert-success my-3" role="alert">
+            @SuccessMessage
+        </div>
     }
-</div>
+
+    <div class="container-fluid">
+        @foreach (var acc in BankAccounts)
+        {
+            <BankAccountCard AccountDto="acc" />
+        }
+    </div>
 </AuthorizeView>
 
 @code {
@@ -39,9 +44,17 @@
     private IList<BankAccountDto> BankAccounts { get; set; } = Enumerable.Empty<BankAccountDto>().ToList();
     private string UserId { get; set; } = string.Empty;
     private string? SuccessMessage = default;
+    private DashbClient _dashClient;
+
+
 
     protected override async Task OnInitializedAsync()
     {
+        _dashClient = new DashbClient(
+            new HttpClientRequestAdapter(
+                authenticationProvider: new AnonymousAuthenticationProvider(),
+                httpClient: Http));
+
         var authState = await AuthenticationStateProvider
                 .GetAuthenticationStateAsync();
 
@@ -59,12 +72,47 @@
         }
     }
 
+    private async Task ShowNewAccountModal()
+    {
+        var parameters = new Dictionary<string, object>();
+        parameters.Add("UserId", UserId);
+        parameters.Add("AccountRefs", BankAccounts.Select(x => x.AccountRef).ToArray());
+        parameters.Add("OnClickCallback", EventCallback.Factory.Create<CurrentAccountDto>(this, NewAccountConfirmedAsync));
+        await modal.ShowAsync<AddNewAccount>(title: "New Bank Account", parameters: parameters);
+    }
+
     private async Task ShowNewExchangeModal()
     {
         var parameters = new Dictionary<string, object>();
         parameters.Add("BankAccounts", BankAccounts);
         parameters.Add("OnClickCallback", EventCallback.Factory.Create<CurrencyExchangeOrderSummary>(this, ModalConfirmedAsync));
         await modal.ShowAsync<CurrencyExchangeNew>(title: "New Exchange Details", parameters: parameters);
+    }
+
+    private async Task NewAccountConfirmedAsync(CurrentAccountDto newAccount)
+    {
+        await modal.HideAsync();
+
+        var reqBuilder = _dashClient.Api.Users[UserId].AddCurrentAccount;
+        var res = await reqBuilder.PostAsync(new ApiModels.CreateCurrentAccount
+        {
+            ExternalRef = newAccount.ExternalRef,
+            AccountCurrency = newAccount.AccountCurrency switch
+            {
+                Models.Currency.GBP => ApiModels.Currency.GBP,
+                Models.Currency.EUR => ApiModels.Currency.EUR,
+                Models.Currency.USD => ApiModels.Currency.USD,
+                Models.Currency.CAD => ApiModels.Currency.CAD,
+                Models.Currency.PLN => ApiModels.Currency.PLN,
+                Models.Currency.NOK => ApiModels.Currency.NOK,
+                Models.Currency.CHF => ApiModels.Currency.CHF,
+                _ => ApiModels.Currency.USD
+            },
+            UserId = UserId,
+        });
+
+        SuccessMessage = "Account creation has been scheduled!";
+        StateHasChanged();
     }
 
     private async Task ModalConfirmedAsync(CurrencyExchangeOrderSummary order)

@@ -194,10 +194,59 @@
           }
         }
       }
+    },
+    "/api/users/{userid}/:add-current-account": {
+      "post": {
+        "tags": [
+          "users-accounts"
+        ],
+        "parameters": [
+          {
+            "name": "userid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCurrentAccount"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "CreateCurrentAccount": {
+        "type": "object",
+        "properties": {
+          "externalRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "accountCurrency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "userId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "Currency": {
         "enum": [
           "EUR",

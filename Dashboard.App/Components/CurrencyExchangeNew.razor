@@ -111,7 +111,11 @@
     protected async Task OnSourceAmountChanged()
     {
         State.TargetAmount = 0m;
-        if (State.SourceAmount > 0 && State.DebtorAccount is not null && State.BeneficiaryAccount is not null)
+        if (State.SourceAmount > 0 &&
+            State.DebtorAccount is not null &&
+            State.BeneficiaryAccount is not null &&
+            State.DebtorAccountRef is not null &&
+            State.BeneficiaryAccountRef is not null)
         {
             State.Order = new CurrencyExchangeOrderSummary(State.DebtorAccountRef, State.BeneficiaryAccountRef, State.SourceAmount);
             CalculateTargetAmount(State.DebtorAccount!.Currency, State.BeneficiaryAccount!.Currency);
