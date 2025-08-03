@@ -10,6 +10,7 @@
 @using Microsoft.Kiota.Http.HttpClientLibrary
 @using SavingsOnDapr.Dashboard.Client
 @using ApiModels = SavingsOnDapr.Dashboard.Client.Models
+@using SavingsOnDapr.Dashboard.Client.Models
 @using global::Dashboard.App.Models
 @using global::Dashboard.App.Components
 
@@ -76,8 +77,9 @@
     {
         var parameters = new Dictionary<string, object>();
         parameters.Add("UserId", UserId);
-        parameters.Add("AccountRefs", BankAccounts.Select(x => x.AccountRef).ToArray());
-        parameters.Add("OnClickCallback", EventCallback.Factory.Create<CurrentAccountDto>(this, NewAccountConfirmedAsync));
+        parameters.Add("BankAccounts", BankAccounts);
+        parameters.Add("OnClickCallback", EventCallback.Factory.Create<AccountCreationDto>(this, NewAccountConfirmedAsync));
+        parameters.Add("DashClient", _dashClient);
         await modal.ShowAsync<AddNewAccount>(title: "New Bank Account", parameters: parameters);
     }
 
@@ -89,27 +91,38 @@
         await modal.ShowAsync<CurrencyExchangeNew>(title: "New Exchange Details", parameters: parameters);
     }
 
-    private async Task NewAccountConfirmedAsync(CurrentAccountDto newAccount)
+    private async Task NewAccountConfirmedAsync(AccountCreationDto newAccount)
     {
         await modal.HideAsync();
 
-        var reqBuilder = _dashClient.Api.Users[UserId].AddCurrentAccount;
-        var res = await reqBuilder.PostAsync(new ApiModels.CreateCurrentAccount
-        {
-            ExternalRef = newAccount.ExternalRef,
-            AccountCurrency = newAccount.AccountCurrency switch
+        var apiRequest = new ApiModels.CreateAccountRequest
             {
-                Models.Currency.GBP => ApiModels.Currency.GBP,
-                Models.Currency.EUR => ApiModels.Currency.EUR,
-                Models.Currency.USD => ApiModels.Currency.USD,
-                Models.Currency.CAD => ApiModels.Currency.CAD,
-                Models.Currency.PLN => ApiModels.Currency.PLN,
-                Models.Currency.NOK => ApiModels.Currency.NOK,
-                Models.Currency.CHF => ApiModels.Currency.CHF,
-                _ => ApiModels.Currency.USD
-            },
-            UserId = UserId,
-        });
+                ExternalRef = newAccount.ExternalRef,
+                AccountCurrency = newAccount.AccountCurrency switch
+                {
+                    Models.Currency.GBP => ApiModels.Currency.GBP,
+                    Models.Currency.EUR => ApiModels.Currency.EUR,
+                    Models.Currency.USD => ApiModels.Currency.USD,
+                    Models.Currency.CAD => ApiModels.Currency.CAD,
+                    Models.Currency.PLN => ApiModels.Currency.PLN,
+                    Models.Currency.NOK => ApiModels.Currency.NOK,
+                    Models.Currency.CHF => ApiModels.Currency.CHF,
+                    _ => ApiModels.Currency.USD
+                },
+                UserId = UserId,
+                Type = newAccount.Type,
+            };
+
+        if (newAccount.Type == AccountType.SavingsAccount)
+        {
+            apiRequest.SavingsDetails = new SavingsAccountDetails
+                {
+                    CurrentAccountRef = newAccount.CurrentAccountRef,
+                    InterestRate = (double?)newAccount.InterestRate,
+                };
+        }
+        var reqBuilder = _dashClient.Api.Users[UserId].AddUserAccount;
+        var res = await reqBuilder.PostAsync(apiRequest);
 
         SuccessMessage = "Account creation has been scheduled!";
         StateHasChanged();

@@ -5,6 +5,38 @@
     "version": "1.0"
   },
   "paths": {
+    "/api/savings/{currency}/interest-rate": {
+      "get": {
+        "tags": [
+          "Dashboard.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+        ],
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyRateResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/api/currency-exchange-summary/{source}/{target}/{forDate}": {
       "post": {
         "tags": [
@@ -195,7 +227,7 @@
         }
       }
     },
-    "/api/users/{userid}/:add-current-account": {
+    "/api/users/{userid}/:add-user-account": {
       "post": {
         "tags": [
           "users-accounts"
@@ -214,7 +246,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateCurrentAccount"
+                "$ref": "#/components/schemas/CreateAccountRequest"
               }
             }
           },
@@ -230,19 +262,36 @@
   },
   "components": {
     "schemas": {
-      "CreateCurrentAccount": {
+      "AccountType": {
+        "enum": [
+          "SavingsAccount",
+          "CurrentAccount"
+        ],
+        "type": "string"
+      },
+      "CreateAccountRequest": {
         "type": "object",
         "properties": {
+          "msgId": {
+            "type": "string",
+            "nullable": true
+          },
           "externalRef": {
             "type": "string",
             "nullable": true
           },
-          "accountCurrency": {
-            "$ref": "#/components/schemas/Currency"
-          },
           "userId": {
             "type": "string",
             "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "accountCurrency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "savingsDetails": {
+            "$ref": "#/components/schemas/SavingsAccountDetails"
           }
         },
         "additionalProperties": false
@@ -352,6 +401,23 @@
         },
         "additionalProperties": false
       },
+      "CurrencyRateResponse": {
+        "type": "object",
+        "properties": {
+          "accountCurrency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "interestRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
       "ExchangeOrderType": {
         "enum": [
           "GuaranteedRate",
@@ -359,6 +425,20 @@
           "LimitOrder"
         ],
         "type": "string"
+      },
+      "SavingsAccountDetails": {
+        "type": "object",
+        "properties": {
+          "interestRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "currentAccountRef": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       }
     }
   }

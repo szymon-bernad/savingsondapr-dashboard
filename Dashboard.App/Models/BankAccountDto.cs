@@ -19,4 +19,11 @@ public record BankAccountDto
     [JsonPropertyName("type")]
     public string AccountType { get; init; }
 
+    [JsonPropertyName("details")]
+    public IDictionary<string, string>? Details { get; init; }
+
+    public const string InterestRateKey = "InterestRate";
+
+    public const string AccruedInterestKey = "AccruedInterest";
+
 }

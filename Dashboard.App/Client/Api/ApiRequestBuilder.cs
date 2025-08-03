@@ -4,6 +4,7 @@ using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
 using SavingsOnDapr.Dashboard.Client.Api.Currency;
 using SavingsOnDapr.Dashboard.Client.Api.CurrencyExchangeSummary;
+using SavingsOnDapr.Dashboard.Client.Api.Savings;
 using SavingsOnDapr.Dashboard.Client.Api.Users;
 using System.Collections.Generic;
 using System.IO;
@@ -26,6 +27,11 @@ namespace SavingsOnDapr.Dashboard.Client.Api
         public global::SavingsOnDapr.Dashboard.Client.Api.CurrencyExchangeSummary.CurrencyExchangeSummaryRequestBuilder CurrencyExchangeSummary
         {
             get => new global::SavingsOnDapr.Dashboard.Client.Api.CurrencyExchangeSummary.CurrencyExchangeSummaryRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The savings property</summary>
+        public global::SavingsOnDapr.Dashboard.Client.Api.Savings.SavingsRequestBuilder Savings
+        {
+            get => new global::SavingsOnDapr.Dashboard.Client.Api.Savings.SavingsRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The users property</summary>
         public global::SavingsOnDapr.Dashboard.Client.Api.Users.UsersRequestBuilder Users

@@ -3,7 +3,7 @@
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
 using SavingsOnDapr.Dashboard.Client.Api.Users.Item.Accounts;
-using SavingsOnDapr.Dashboard.Client.Api.Users.Item.AddCurrentAccount;
+using SavingsOnDapr.Dashboard.Client.Api.Users.Item.AddUserAccount;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -21,10 +21,10 @@ namespace SavingsOnDapr.Dashboard.Client.Api.Users.Item
         {
             get => new global::SavingsOnDapr.Dashboard.Client.Api.Users.Item.Accounts.AccountsRequestBuilder(PathParameters, RequestAdapter);
         }
-        /// <summary>The AddCurrentAccount property</summary>
-        public global::SavingsOnDapr.Dashboard.Client.Api.Users.Item.AddCurrentAccount.AddCurrentAccountRequestBuilder AddCurrentAccount
+        /// <summary>The AddUserAccount property</summary>
+        public global::SavingsOnDapr.Dashboard.Client.Api.Users.Item.AddUserAccount.AddUserAccountRequestBuilder AddUserAccount
         {
-            get => new global::SavingsOnDapr.Dashboard.Client.Api.Users.Item.AddCurrentAccount.AddCurrentAccountRequestBuilder(PathParameters, RequestAdapter);
+            get => new global::SavingsOnDapr.Dashboard.Client.Api.Users.Item.AddUserAccount.AddUserAccountRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>
         /// Instantiates a new <see cref="global::SavingsOnDapr.Dashboard.Client.Api.Users.Item.WithUserItemRequestBuilder"/> and sets the default values.

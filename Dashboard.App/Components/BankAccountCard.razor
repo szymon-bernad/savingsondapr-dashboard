@@ -1,17 +1,22 @@
 ﻿@using Dashboard.App.Models
 <Card Class="my-2">
-    <CardHeader Color="CardColor.Success">
-            @(AccountDto?.AccountRef ?? "Unknown...")
+    <CardHeader Color="@(AccountDto.AccountType != "CurrentAccount" ? CardColor.Success : CardColor.Info)">
+        @($"[{AccountDto.AccountType}] > {AccountDto.AccountRef}")
     </CardHeader>
     <CardBody>
-        <p class="card-text">Account Number: @AccountDto?.AccountId</p>
-        <p class="card-text">Account Type: @AccountDto?.AccountType</p>
-        <p class="card-text">Balance: @AccountDto?.TotalBalance [@AccountDto?.Currency]</p>
+        <p class="card-text">Account ID: @AccountDto?.AccountId</p>
+        <p class="card-text">Balance: @AccountDto!.TotalBalance [@AccountDto!.Currency]</p>
+        @if(AccountDto.AccountType == "SavingsAccount")
+        {
+            <p class="card-text">Interest rate: <b>@AccountDto.Details![BankAccountDto.InterestRateKey] %</b></p>
+            <p class="card-text">Interest accrued: @AccountDto.Details![BankAccountDto.AccruedInterestKey]</p>
+        }
+
     </CardBody>
 </Card>
 
 
 
 @code {
-    [Parameter] public BankAccountDto? AccountDto { get; set; }
+    [Parameter] public required BankAccountDto AccountDto { get; set; }
 }
