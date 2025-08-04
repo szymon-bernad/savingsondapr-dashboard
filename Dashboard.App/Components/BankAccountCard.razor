@@ -12,11 +12,52 @@
             <p class="card-text">Interest accrued: @AccountDto.Details![BankAccountDto.AccruedInterestKey]</p>
         }
 
+        @if(NestedAccounts.Count() > 0)
+        {
+            <Button Color="ButtonColor.Light" Size="ButtonSize.Small"
+            @onclick="ToggleCollapse">
+                <Icon Name="@(_toggleState ? IconName.ChevronDown : IconName.ChevronCompactRight)" class="me-1" />
+                @($"[ {NestedAccounts.Count()} ] linked Savings Account(s)")
+            </Button>
+            <Collapse @ref="_collapseContainer">
+                @foreach (var nestedAcc in NestedAccounts)
+                {
+                    <Card Class="my-2">
+                        <CardHeader Color="@(nestedAcc.AccountType != "CurrentAccount" ? CardColor.Success : CardColor.Info)">
+                            @($"[{nestedAcc.AccountType}] > {nestedAcc.AccountRef}")
+                        </CardHeader>
+                        <CardBody>
+                            <p class="card-text">Account ID: @nestedAcc.AccountId</p>
+                            <p class="card-text">Balance: @nestedAcc.TotalBalance [@nestedAcc.Currency]</p>
+                            @if (nestedAcc.AccountType == "SavingsAccount")
+                            {
+                                <p class="card-text">Interest rate: <b>@nestedAcc.Details![BankAccountDto.InterestRateKey] %</b></p>
+                                <p class="card-text">Interest accrued: @nestedAcc.Details![BankAccountDto.AccruedInterestKey]</p>
+                            }
+
+                        </CardBody>
+                    </Card>
+                }
+            </Collapse>
+        }
+
     </CardBody>
 </Card>
 
 
 
 @code {
-    [Parameter] public required BankAccountDto AccountDto { get; set; }
+    [Parameter] public required BankAccountDto AccountDto { get; init; }
+
+    [Parameter] public IEnumerable<BankAccountDto> NestedAccounts { get; init; }
+
+    private Collapse _collapseContainer = default!;
+
+    private Task ToggleCollapse() 
+    {
+        _toggleState = !_toggleState;
+        return _collapseContainer.ToggleAsync();
+    }
+
+    private bool _toggleState = false;
 }

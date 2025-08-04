@@ -11,6 +11,7 @@
 @using SavingsOnDapr.Dashboard.Client
 @using ApiModels = SavingsOnDapr.Dashboard.Client.Models
 @using SavingsOnDapr.Dashboard.Client.Models
+@using System.Drawing
 @using global::Dashboard.App.Models
 @using global::Dashboard.App.Components
 
@@ -31,9 +32,9 @@
     }
 
     <div class="container-fluid">
-        @foreach (var acc in BankAccounts)
+        @foreach (var acc in CurrentAccounts)
         {
-            <BankAccountCard AccountDto="acc" />
+            <BankAccountCard AccountDto="acc" NestedAccounts="SavingsAccountsByCurrentAccount[acc.AccountId]" />
         }
     </div>
 </AuthorizeView>
@@ -47,7 +48,22 @@
     private string? SuccessMessage = default;
     private DashbClient _dashClient;
 
+    // Add these properties to organize the data
+    private IList<BankAccountDto> CurrentAccounts => BankAccounts
+        .Where(acc => acc.AccountType == "CurrentAccount")
+        .ToList();
 
+    private ILookup<string, BankAccountDto> SavingsAccountsByCurrentAccount => BankAccounts
+        .Where(acc => acc.AccountType == "SavingsAccount")
+        .ToLookup(savings => GetCurrentAccountId(savings));
+
+    private string GetCurrentAccountId(BankAccountDto savingsAccount)
+    {
+        // Extract the parent current account reference from savings account details
+        return savingsAccount.Details?.TryGetValue("CurrentAccountId", out var currentId) == true
+            ? currentId
+            : string.Empty;
+    }
 
     protected override async Task OnInitializedAsync()
     {
